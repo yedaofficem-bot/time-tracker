@@ -1,0 +1,13 @@
+{
+  "name": "מעקב זמן — יהודה",
+  "short_name": "מעקב זמן",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1f3c",
+  "theme_color": "#0d1f3c",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
