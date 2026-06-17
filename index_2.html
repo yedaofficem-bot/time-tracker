@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="מעקב זמן">
+<meta name="theme-color" content="#0d1f3c">
+<link rel="manifest" href="manifest.json">
+<title>מעקב זמן — יהודה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --navy: #0d1f3c;
+    --navy2: #162d50;
+    --gold: #c9a84c;
+    --gold2: #e8c76a;
+    --cream: #f8f4ed;
+    --text: #1a1a2e;
+    --muted: #7a8599;
+    --sales: #1a9e6a;
+    --ops: #2278c7;
+    --meeting: #b87316;
+    --family: #c44f7a;
+    --other: #6b6b7a;
+    --danger: #e05252;
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Header */
+  .header {
+    padding: env(safe-area-inset-top, 16px) 20px 12px;
+    padding-top: max(env(safe-area-inset-top), 16px);
+    background: var(--navy);
+    flex-shrink: 0;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .app-title { font-size: 13px; font-weight: 500; color: var(--gold); letter-spacing: 0.05em; }
+  .day-count { font-size: 12px; color: var(--muted); }
+
+  /* Timer section */
+  .timer-section {
+    padding: 12px 20px 16px;
+    background: var(--navy);
+    flex-shrink: 0;
+    text-align: center;
+  }
+  .current-cat {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    min-height: 20px;
+    transition: color 0.3s;
+  }
+  .timer-display {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: color 0.3s;
+  }
+
+  /* Scrollable content */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 16px 16px;
+  }
+
+  /* Category buttons */
+  .cats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .cats-grid .cat-btn:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .cat-btn {
+    background: var(--navy2);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 14px 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.18s;
+    color: #fff;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .cat-btn:active { transform: scale(0.96); }
+  .cat-btn.active {
+    border-width: 2px;
+    background: rgba(255,255,255,0.06);
+  }
+  .cat-btn .icon { font-size: 26px; margin-bottom: 5px; }
+  .cat-btn .name { font-size: 15px; font-weight: 700; }
+  .cat-btn .sub { font-size: 11px; opacity: 0.55; margin-top: 2px; }
+  .cat-btn[data-cat="מכירות"] { --c: var(--sales); }
+  .cat-btn[data-cat="תפעול"] { --c: var(--ops); }
+  .cat-btn[data-cat="פגישות"] { --c: var(--meeting); }
+  .cat-btn[data-cat="משפחה"] { --c: var(--family); }
+  .cat-btn[data-cat="אחר"] { --c: var(--other); }
+  .cat-btn.active { border-color: var(--c); }
+  .cat-btn.active .name { color: var(--c); }
+
+  /* Stop button */
+  .stop-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.18s;
+  }
+  .stop-btn:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+
+  /* Section title */
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Today stats */
+  .today-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .today-card {
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .today-card .tc-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .today-card .tc-val { font-size: 18px; font-weight: 700; }
+  .today-card .tc-pct { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .today-card[data-cat="מכירות"] .tc-val { color: var(--sales); }
+  .today-card[data-cat="תפעול"] .tc-val { color: var(--ops); }
+  .today-card[data-cat="פגישות"] .tc-val { color: var(--meeting); }
+  .today-card[data-cat="משפחה"] .tc-val { color: var(--family); }
+  .today-card[data-cat="אחר"] .tc-val { color: var(--other); }
+
+  /* Bars */
+  .bar-section { margin-bottom: 20px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bar-name { font-size: 12px; color: var(--muted); width: 52px; flex-shrink: 0; text-align: right; }
+  .bar-track { flex: 1; height: 7px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .bar-pct { font-size: 12px; color: var(--muted); width: 30px; text-align: left; flex-shrink: 0; }
+
+  /* Log */
+  .log-section { margin-bottom: 20px; }
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .log-cat { font-size: 13px; font-weight: 500; flex: 1; }
+  .log-date { font-size: 11px; color: var(--muted); }
+  .log-dur { font-size: 13px; font-weight: 700; color: var(--gold); }
+  .empty-log { font-size: 13px; color: var(--muted); text-align: center; padding: 20px 0; }
+
+  /* Bottom buttons */
+  .bottom-btns { display: flex; gap: 8px; margin-bottom: env(safe-area-inset-bottom, 0); }
+  .export-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px solid var(--gold);
+    background: transparent;
+    color: var(--gold);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .export-btn:active { background: rgba(201,168,76,0.1); }
+  .reset-main-btn {
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(224,82,82,0.4);
+    background: transparent;
+    color: var(--danger);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .reset-main-btn:active { background: rgba(224,82,82,0.1); }
+
+  /* ===== RESET MODAL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: #1a2f52;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .reset-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .reset-option {
+    background: var(--navy2);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: right;
+    transition: all 0.18s;
+    color: #fff;
+    font-family: 'Heebo', sans-serif;
+    width: 100%;
+  }
+  .reset-option:active { transform: scale(0.98); }
+  .reset-option .ro-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .reset-option .ro-sub { font-size: 12px; color: var(--muted); }
+  .reset-option.danger { border-color: rgba(224,82,82,0.35); }
+  .reset-option.danger .ro-title { color: var(--danger); }
+  .reset-option.warning { border-color: rgba(184,115,22,0.35); }
+  .reset-option.warning .ro-title { color: #e8a843; }
+
+  /* Confirm step */
+  .confirm-step { display: none; }
+  .confirm-step.open { display: block; }
+  .confirm-text {
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .confirm-text strong { color: var(--danger); }
+  .confirm-btns { display: flex; gap: 10px; }
+  .confirm-cancel {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .confirm-cancel:active { background: rgba(255,255,255,0.05); }
+  .confirm-go {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    background: var(--danger);
+    color: #fff;
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .confirm-go:active { opacity: 0.85; }
+
+  /* Day picker */
+  .day-picker { display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 260px; overflow-y: auto; }
+  .day-picker.open { display: flex; }
+  .day-pick-item {
+    background: var(--navy2);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.15s;
+    color: #fff;
+    font-family: 'Heebo', sans-serif;
+  }
+  .day-pick-item:active { background: rgba(255,255,255,0.08); }
+  .day-pick-item .dp-date { font-size: 14px; font-weight: 700; }
+  .day-pick-item .dp-sum { font-size: 12px; color: var(--muted); }
+  .day-pick-item.selected { border-color: var(--danger); }
+
+  /* Pulse animation */
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 26,158,106), 0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--pulse-rgb, 26,158,106), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 26,158,106), 0); }
+  }
+  .cat-btn.active { animation: pulse-ring 2s infinite; }
+  .cat-btn[data-cat="מכירות"].active { --pulse-rgb: 26,158,106; }
+  .cat-btn[data-cat="תפעול"].active { --pulse-rgb: 34,120,199; }
+  .cat-btn[data-cat="פגישות"].active { --pulse-rgb: 184,115,22; }
+  .cat-btn[data-cat="משפחה"].active { --pulse-rgb: 196,79,122; }
+  .cat-btn[data-cat="אחר"].active { --pulse-rgb: 107,107,122; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1a9e6a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 200;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="app-title">מעקב זמן — יהודה</div>
+    <div class="day-count" id="day-count">יום 1 מתוך 14</div>
+  </div>
+</div>
+
+<div class="timer-section">
+  <div class="current-cat" id="current-label">בחר פעילות להתחיל</div>
+  <div class="timer-display" id="timer-display" style="color: var(--muted)">00:00:00</div>
+</div>
+
+<div class="content">
+  <div class="cats-grid">
+    <button class="cat-btn" data-cat="מכירות" onclick="startCat('מכירות')">
+      <div class="icon">📞</div>
+      <div class="name">מכירות</div>
+      <div class="sub">שיחות, לידים</div>
+    </button>
+    <button class="cat-btn" data-cat="תפעול" onclick="startCat('תפעול')">
+      <div class="icon">📋</div>
+      <div class="name">תפעול</div>
+      <div class="sub">מסמכים, בנקים</div>
+    </button>
+    <button class="cat-btn" data-cat="פגישות" onclick="startCat('פגישות')">
+      <div class="icon">🏦</div>
+      <div class="name">פגישות</div>
+      <div class="sub">לקוחות, בנקים</div>
+    </button>
+    <button class="cat-btn" data-cat="משפחה" onclick="startCat('משפחה')">
+      <div class="icon">🏠</div>
+      <div class="name">משפחה</div>
+      <div class="sub">ילדים, בית</div>
+    </button>
+    <button class="cat-btn" data-cat="אחר" onclick="startCat('אחר')">
+      <div class="icon">⚙️</div>
+      <div class="name">אחר</div>
+      <div class="sub">שיווק, למידה</div>
+    </button>
+  </div>
+
+  <button class="stop-btn" onclick="stopTracking()">⏹ עצור מעקב</button>
+
+  <div class="section-title">היום</div>
+  <div class="today-grid">
+    <div class="today-card" data-cat="מכירות">
+      <div class="tc-label">מכירות</div>
+      <div class="tc-val" id="s-מכירות">0:00</div>
+      <div class="tc-pct" id="p-מכירות">0%</div>
+    </div>
+    <div class="today-card" data-cat="תפעול">
+      <div class="tc-label">תפעול</div>
+      <div class="tc-val" id="s-תפעול">0:00</div>
+      <div class="tc-pct" id="p-תפעול">0%</div>
+    </div>
+    <div class="today-card" data-cat="פגישות">
+      <div class="tc-label">פגישות</div>
+      <div class="tc-val" id="s-פגישות">0:00</div>
+      <div class="tc-pct" id="p-פגישות">0%</div>
+    </div>
+    <div class="today-card" data-cat="משפחה">
+      <div class="tc-label">משפחה</div>
+      <div class="tc-val" id="s-משפחה">0:00</div>
+      <div class="tc-pct" id="p-משפחה">0%</div>
+    </div>
+    <div class="today-card" data-cat="אחר">
+      <div class="tc-label">אחר</div>
+      <div class="tc-val" id="s-אחר">0:00</div>
+      <div class="tc-pct" id="p-אחר">0%</div>
+    </div>
+  </div>
+
+  <div class="bar-section">
+    <div class="section-title">14 יום — התפלגות</div>
+    <div class="bar-row"><div class="bar-name">מכירות</div><div class="bar-track"><div class="bar-fill" id="bar-מכירות" style="width:0%;background:var(--sales)"></div></div><div class="bar-pct" id="bpct-מכירות">0%</div></div>
+    <div class="bar-row"><div class="bar-name">תפעול</div><div class="bar-track"><div class="bar-fill" id="bar-תפעול" style="width:0%;background:var(--ops)"></div></div><div class="bar-pct" id="bpct-תפעול">0%</div></div>
+    <div class="bar-row"><div class="bar-name">פגישות</div><div class="bar-track"><div class="bar-fill" id="bar-פגישות" style="width:0%;background:var(--meeting)"></div></div><div class="bar-pct" id="bpct-פגישות">0%</div></div>
+    <div class="bar-row"><div class="bar-name">משפחה</div><div class="bar-track"><div class="bar-fill" id="bar-משפחה" style="width:0%;background:var(--family)"></div></div><div class="bar-pct" id="bpct-משפחה">0%</div></div>
+    <div class="bar-row"><div class="bar-name">אחר</div><div class="bar-track"><div class="bar-fill" id="bar-אחר" style="width:0%;background:var(--other)"></div></div><div class="bar-pct" id="bpct-אחר">0%</div></div>
+  </div>
+
+  <div class="log-section">
+    <div class="section-title">יומן</div>
+    <div id="log-container"><div class="empty-log">עוד אין פעילות מוקלטת</div></div>
+  </div>
+
+  <div class="bottom-btns">
+    <button class="export-btn" onclick="exportCSV()">⬇️ ייצא CSV</button>
+    <button class="reset-main-btn" onclick="openResetModal()">🗑️ איפוס</button>
+  </div>
+</div>
+
+<!-- RESET MODAL -->
+<div class="modal-overlay" id="reset-modal" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Step 1: choose reset type -->
+    <div id="step-choose">
+      <div class="modal-title">איפוס נתונים</div>
+      <div class="modal-subtitle">מה תרצה לאפס?</div>
+      <div class="reset-options">
+        <button class="reset-option warning" onclick="selectReset('today')">
+          <div class="ro-title">⚠️ אפס את היום הנוכחי</div>
+          <div class="ro-sub">מוחק רק את הנתונים של היממה הנוכחית</div>
+        </button>
+        <button class="reset-option warning" onclick="showDayPicker()">
+          <div class="ro-title">📅 אפס יום ספציפי</div>
+          <div class="ro-sub">בחר יום מהיומן ומחק אותו בנפרד</div>
+        </button>
+        <button class="reset-option danger" onclick="selectReset('all')">
+          <div class="ro-title">🗑️ אפס הכל מההתחלה</div>
+          <div class="ro-sub">מוחק את כל הנתונים וכל הימים</div>
+        </button>
+      </div>
+      <button class="confirm-cancel" onclick="closeModal()">ביטול</button>
+    </div>
+
+    <!-- Step 1b: day picker -->
+    <div id="step-day-picker" style="display:none">
+      <div class="modal-title">בחר יום למחיקה</div>
+      <div class="modal-subtitle">לחץ על יום כדי לסמן אותו</div>
+      <div class="day-picker open" id="day-picker-list"></div>
+      <div class="confirm-btns">
+        <button class="confirm-cancel" onclick="backToChoose()">חזור</button>
+        <button class="confirm-go" id="delete-day-btn" onclick="confirmDeleteDay()" style="background:#e8a843">מחק יום</button>
+      </div>
+    </div>
+
+    <!-- Step 2: confirm -->
+    <div id="step-confirm" style="display:none">
+      <div class="modal-title">אישור מחיקה</div>
+      <div class="confirm-text" id="confirm-text"></div>
+      <div class="confirm-btns">
+        <button class="confirm-cancel" onclick="backToChoose()">חזור</button>
+        <button class="confirm-go" onclick="doReset()">כן, מחק</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATS = ['מכירות','תפעול','פגישות','משפחה','אחר'];
+const COLORS = {'מכירות':'#1a9e6a','תפעול':'#2278c7','פגישות':'#b87316','משפחה':'#c44f7a','אחר':'#6b6b7a'};
+const SK = 'yehuda_tt_v2';
+
+let st = { current: null, startTs: null, todayKey: '', todayTotals: {}, logs: [], startDate: null };
+let pendingReset = null;
+let selectedDay = null;
+
+function load() {
+  try {
+    const s = localStorage.getItem(SK);
+    if (s) st = JSON.parse(s);
+  } catch(e) {}
+  CATS.forEach(c => { if (!st.todayTotals[c]) st.todayTotals[c] = 0; });
+  if (!st.logs) st.logs = [];
+  if (!st.startDate) st.startDate = new Date().toISOString().split('T')[0];
+  checkNewDay();
+}
+
+function save() {
+  try { localStorage.setItem(SK, JSON.stringify(st)); } catch(e) {}
+}
+
+function checkNewDay() {
+  const today = new Date().toLocaleDateString('he-IL');
+  if (st.todayKey !== today) {
+    st.todayKey = today;
+    st.todayTotals = {};
+    CATS.forEach(c => st.todayTotals[c] = 0);
+    save();
+  }
+}
+
+function daysSinceStart() {
+  if (!st.startDate) return 1;
+  const start = new Date(st.startDate);
+  const now = new Date();
+  return Math.max(1, Math.min(14, Math.floor((now - start) / 86400000) + 1));
+}
+
+function fmt(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return h + ':' + String(m).padStart(2,'0');
+  return m + ':' + String(sec % 60).padStart(2,'0');
+}
+
+function fmtFull(sec) {
+  return String(Math.floor(sec/3600)).padStart(2,'0') + ':' +
+         String(Math.floor((sec%3600)/60)).padStart(2,'0') + ':' +
+         String(sec%60).padStart(2,'0');
+}
+
+let timerIv = null;
+
+function startCat(cat) {
+  if (st.current) stopTracking();
+  st.current = cat;
+  st.startTs = Date.now();
+  save();
+  document.getElementById('current-label').textContent = 'עכשיו: ' + cat;
+  document.getElementById('current-label').style.color = COLORS[cat];
+  document.getElementById('timer-display').style.color = COLORS[cat];
+  CATS.forEach(c => document.querySelector('[data-cat="'+c+'"]').classList.remove('active'));
+  document.querySelector('[data-cat="'+cat+'"]').classList.add('active');
+  if (timerIv) clearInterval(timerIv);
+  timerIv = setInterval(() => {
+    const e = Math.floor((Date.now() - st.startTs) / 1000);
+    document.getElementById('timer-display').textContent = fmtFull(e);
+  }, 1000);
+}
+
+function stopTracking() {
+  if (!st.current || !st.startTs) return;
+  const elapsed = Math.floor((Date.now() - st.startTs) / 1000);
+  if (elapsed >= 10) {
+    const cat = st.current;
+    st.todayTotals[cat] = (st.todayTotals[cat] || 0) + elapsed;
+    st.logs.unshift({ date: st.todayKey, cat, sec: elapsed, ts: Date.now() });
+    if (st.logs.length > 1000) st.logs = st.logs.slice(0, 1000);
+  }
+  st.current = null;
+  st.startTs = null;
+  save();
+  if (timerIv) clearInterval(timerIv);
+  document.getElementById('timer-display').textContent = '00:00:00';
+  document.getElementById('timer-display').style.color = 'var(--muted)';
+  document.getElementById('current-label').textContent = 'בחר פעילות להתחיל';
+  document.getElementById('current-label').style.color = '';
+  CATS.forEach(c => document.querySelector('[data-cat="'+c+'"]').classList.remove('active'));
+  render();
+}
+
+function render() {
+  checkNewDay();
+  const todayTotal = CATS.reduce((s,c) => s + (st.todayTotals[c]||0), 0);
+  CATS.forEach(c => {
+    const sec = st.todayTotals[c] || 0;
+    const pct = todayTotal > 0 ? Math.round(sec/todayTotal*100) : 0;
+    document.getElementById('s-'+c).textContent = fmt(sec);
+    document.getElementById('p-'+c).textContent = pct + '%';
+  });
+  const allTotals = {};
+  CATS.forEach(c => allTotals[c] = 0);
+  st.logs.forEach(l => { if (allTotals[l.cat] !== undefined) allTotals[l.cat] += l.sec; });
+  const grand = Object.values(allTotals).reduce((a,b)=>a+b,0);
+  CATS.forEach(c => {
+    const pct = grand > 0 ? Math.round(allTotals[c]/grand*100) : 0;
+    document.getElementById('bar-'+c).style.width = pct + '%';
+    document.getElementById('bpct-'+c).textContent = pct + '%';
+  });
+  const container = document.getElementById('log-container');
+  if (st.logs.length === 0) {
+    container.innerHTML = '<div class="empty-log">עוד אין פעילות מוקלטת</div>';
+  } else {
+    container.innerHTML = st.logs.slice(0,40).map(l =>
+      `<div class="log-item">
+        <div class="log-dot" style="background:${COLORS[l.cat]}"></div>
+        <div class="log-cat">${l.cat}</div>
+        <div class="log-date">${l.date}</div>
+        <div class="log-dur">${fmt(l.sec)}</div>
+      </div>`
+    ).join('');
+  }
+  document.getElementById('day-count').textContent = 'יום ' + daysSinceStart() + ' מתוך 14';
+}
+
+function exportCSV() {
+  let csv = '\uFEFF' + 'תאריך,קטגוריה,דקות\n';
+  st.logs.forEach(l => {
+    csv += `${l.date},${l.cat},${Math.round(l.sec/60)}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'מעקב_זמן_יהודה.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== RESET MODAL =====
+function openResetModal() {
+  pendingReset = null;
+  selectedDay = null;
+  showStep('step-choose');
+  document.getElementById('reset-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('reset-modal').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('reset-modal')) closeModal();
+}
+
+function showStep(id) {
+  ['step-choose','step-confirm','step-day-picker'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function selectReset(type) {
+  pendingReset = type;
+  const texts = {
+    'today': `פעולה זו תמחק את כל הנתונים של <strong>היום הנוכחי</strong> בלבד.\n\nנתוני ימים קודמים יישמרו.`,
+    'all': `פעולה זו תמחק <strong>את כל הנתונים</strong> — כל הימים, כל הרשומות, והתאריך ההתחלה יאופס.\n\nלא ניתן לבטל פעולה זו.`
+  };
+  document.getElementById('confirm-text').innerHTML = texts[type];
+  showStep('step-confirm');
+}
+
+function showDayPicker() {
+  // Build unique days from logs
+  const dayMap = {};
+  st.logs.forEach(l => {
+    if (!dayMap[l.date]) dayMap[l.date] = 0;
+    dayMap[l.date] += l.sec;
+  });
+  // Also add today if has data
+  const todayTotal = CATS.reduce((s,c) => s + (st.todayTotals[c]||0), 0);
+  if (todayTotal > 0 && !dayMap[st.todayKey]) dayMap[st.todayKey] = todayTotal;
+
+  const days = Object.entries(dayMap).sort((a,b) => b[0].localeCompare(a[0]));
+
+  if (days.length === 0) {
+    showToast('אין ימים עם נתונים למחיקה');
+    return;
+  }
+
+  const list = document.getElementById('day-picker-list');
+  list.innerHTML = days.map(([date, sec]) =>
+    `<div class="day-pick-item" data-date="${date}" onclick="selectDayToDelete('${date}', this)">
+      <div class="dp-date">${date}</div>
+      <div class="dp-sum">${fmt(sec)} מוקלט</div>
+    </div>`
+  ).join('');
+
+  selectedDay = null;
+  showStep('step-day-picker');
+}
+
+function selectDayToDelete(date, el) {
+  selectedDay = date;
+  document.querySelectorAll('.day-pick-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function confirmDeleteDay() {
+  if (!selectedDay) { showToast('סמן יום קודם'); return; }
+  pendingReset = 'day';
+  document.getElementById('confirm-text').innerHTML =
+    `פעולה זו תמחק את כל הנתונים של <strong>${selectedDay}</strong>.\n\nnתוני שאר הימים יישמרו.`;
+  showStep('step-confirm');
+}
+
+function backToChoose() {
+  selectedDay = null;
+  pendingReset = null;
+  showStep('step-choose');
+}
+
+function doReset() {
+  if (pendingReset === 'all') {
+    if (st.current) { st.current = null; st.startTs = null; if (timerIv) clearInterval(timerIv); }
+    st = { current: null, startTs: null, todayKey: '', todayTotals: {}, logs: [], startDate: new Date().toISOString().split('T')[0] };
+    CATS.forEach(c => st.todayTotals[c] = 0);
+    save();
+    resetTimerUI();
+    showToast('✅ כל הנתונים אופסו');
+  } else if (pendingReset === 'today') {
+    if (st.current) { st.current = null; st.startTs = null; if (timerIv) clearInterval(timerIv); }
+    CATS.forEach(c => st.todayTotals[c] = 0);
+    st.logs = st.logs.filter(l => l.date !== st.todayKey);
+    save();
+    resetTimerUI();
+    showToast('✅ נתוני היום אופסו');
+  } else if (pendingReset === 'day' && selectedDay) {
+    const isToday = selectedDay === st.todayKey;
+    if (isToday) { CATS.forEach(c => st.todayTotals[c] = 0); if (st.current) { st.current = null; st.startTs = null; if (timerIv) clearInterval(timerIv); resetTimerUI(); } }
+    st.logs = st.logs.filter(l => l.date !== selectedDay);
+    save();
+    showToast(`✅ ${selectedDay} נמחק`);
+  }
+  closeModal();
+  render();
+}
+
+function resetTimerUI() {
+  if (timerIv) clearInterval(timerIv);
+  document.getElementById('timer-display').textContent = '00:00:00';
+  document.getElementById('timer-display').style.color = 'var(--muted)';
+  document.getElementById('current-label').textContent = 'בחר פעילות להתחיל';
+  document.getElementById('current-label').style.color = '';
+  CATS.forEach(c => document.querySelector('[data-cat="'+c+'"]').classList.remove('active'));
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Init
+load();
+render();
+if (st.current && st.startTs) {
+  document.getElementById('current-label').textContent = 'עכשיו: ' + st.current;
+  document.getElementById('current-label').style.color = COLORS[st.current];
+  document.getElementById('timer-display').style.color = COLORS[st.current];
+  document.querySelector('[data-cat="'+st.current+'"]').classList.add('active');
+  timerIv = setInterval(() => {
+    const e = Math.floor((Date.now() - st.startTs) / 1000);
+    document.getElementById('timer-display').textContent = fmtFull(e);
+  }, 1000);
+}
+</script>
+</body>
+</html>
