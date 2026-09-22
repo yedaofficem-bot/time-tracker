@@ -33,7 +33,7 @@
     background-attachment:fixed; min-height:100vh; min-height:100dvh;
     padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0);
   }
-  .wrap{max-width:760px;margin:0 auto;padding-block:0 44px;padding-left:16px;padding-right:16px;}
+  .wrap{max-width:1180px;margin:0 auto;padding-block:0 44px;padding-left:16px;padding-right:16px;}
   header{position:sticky; top:0; z-index:20; padding-top:18px; padding-bottom:10px; background:linear-gradient(var(--navy) 78%, rgba(13,31,60,0));}
   .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .brand-name{font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;}
@@ -206,6 +206,22 @@
   .seg[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#2a2205;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;}
   .modal-actions .btn{flex:1;text-align:center;padding:12px;}
+  /* ---- desktop layout ---- */
+  .today-grid{display:block;}
+  .week-pool{background:var(--navy2);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:14px;}
+  .pool-head{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+  .pool-list{display:flex;flex-direction:column;gap:7px;}
+  .groups-grid,.month-grid{display:block;}
+  @media (min-width:860px){
+    .today-grid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start;}
+    .today-main{min-width:0;}
+    .week-pool{position:sticky;top:12px;margin-top:0;}
+    .groups-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+    .month-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start;}
+    .groups-grid .group,.month-grid .group,.month-grid .mrow{margin-top:0;}
+  }
+  @media (min-width:1080px){ .groups-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
   @media (max-width:430px){.greeting{font-size:23px;} .title{font-size:16px;} .add-btn .lbl{display:none;} .add-btn{padding:11px 13px;} .tab{font-size:12.5px;padding:9px 2px;}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>
@@ -232,7 +248,8 @@
 
   <div class="foot">
     <b>החודש</b> בוחר נושאי פוקוס → <b>השבוע</b> שולף מהם משימות → <b>היום</b> שולף מהשבוע<br>
-    כלל הזהב: בהיום עד <b>3 משימות</b>, אחת מסומנת ⭐ — "אם רק דבר אחד, זה זה"
+    כלל הזהב: בהיום עד <b>3 משימות</b>, אחת מסומנת ⭐ — "אם רק דבר אחד, זה זה"<br>
+    <span style="opacity:.8">קיצורי מקלדת: <b>1–4</b> מעבר בין לשוניות · <b>N</b> נושא חדש</span>
     <div class="foot-tools">
       <button id="expBtn">📤 גיבוי</button>
       <button id="impBtn">📥 שחזור</button>
@@ -350,24 +367,26 @@ function renderShell(){
 function htmlToday(){
   const items=allTasks().filter(o=>o.t.today).sort((a,b)=>(b.t.star?1:0)-(a.t.star?1:0)||(a.t.done?1:0)-(b.t.done?1:0));
   const open=items.filter(o=>!o.t.done).length, done=items.filter(o=>o.t.done).length;
+  let main;
   if(items.length===0){
-    return `<div class="empty-view">עדיין לא בחרת משימות להיום.<br>עבור ל"השבוע" ומשוך <b>3 משימות</b> שיקדמו אותך.<br><button class="btn primary" data-act="gotoWeek">🗓️ בחר מהשבוע</button></div>`;
+    main=`<div class="empty-view">עדיין לא בחרת משימות להיום.<br>משוך <b>3 משימות</b> מהמאגר שבצד (או מלשונית "השבוע").</div>`;
+  } else {
+    const banner = open>3
+      ? `<div class="banner warn">⚠️ ${open} משימות פתוחות להיום — עמוס. שקול לדחות אחת ל"השבוע".</div>`
+      : open===0
+        ? `<div class="banner ok">✓ סיימת את כל משימות היום! זמן לבחור את מחר.</div>`
+        : `<div class="banner info">${done} מתוך ${items.length} הושלמו · נותרו ${open} · התחל מ־⭐ למעלה</div>`;
+    const rows=items.map(o=>{const c=cat(o.tp);return `<div class="ftask ${o.t.star?'star':''} ${o.t.done?'done':''}" style="--accent:${c.color}">
+        <button class="bigcheck ${o.t.done?'on':''}" data-act="toggleDone" data-tid="${o.tp.id}" data-i="${o.i}">✓</button>
+        <div class="mid"><div class="ftxt">${esc(o.t.t)}</div><div class="fsub"><span class="cdot" style="background:${c.color}"></span>${c.name} · ${esc(o.tp.title)}</div></div>
+        <button class="star-btn ${o.t.star?'on':''}" data-act="star" data-tid="${o.tp.id}" data-i="${o.i}" title="המשימה האחת">⭐</button>
+        <button class="mini-x" data-act="rmToday" data-tid="${o.tp.id}" data-i="${o.i}" title="הסר מהיום">✕</button>
+      </div>`;}).join('');
+    main=banner+`<div class="focus-list">${rows}</div>`;
   }
-  let banner = open>3
-    ? `<div class="banner warn">⚠️ ${open} משימות פתוחות להיום — עמוס. שקול לדחות אחת ל"השבוע".</div>`
-    : open===0
-      ? `<div class="banner ok">✓ סיימת את כל משימות היום! זמן לבחור את מחר מ"השבוע".</div>`
-      : `<div class="banner info">${done} מתוך ${items.length} הושלמו · נותרו ${open} · התחל מ־⭐ למעלה</div>`;
-  const rows=items.map(o=>{const c=cat(o.tp);return `<div class="ftask ${o.t.star?'star':''} ${o.t.done?'done':''}" style="--accent:${c.color}">
-      <button class="bigcheck ${o.t.done?'on':''}" data-act="toggleDone" data-tid="${o.tp.id}" data-i="${o.i}">✓</button>
-      <div class="mid"><div class="ftxt">${esc(o.t.t)}</div><div class="fsub"><span class="cdot" style="background:${c.color}"></span>${c.name} · ${esc(o.tp.title)}</div></div>
-      <button class="star-btn ${o.t.star?'on':''}" data-act="star" data-tid="${o.tp.id}" data-i="${o.i}" title="המשימה האחת">⭐</button>
-      <button class="mini-x" data-act="rmToday" data-tid="${o.tp.id}" data-i="${o.i}" title="הסר מהיום">✕</button>
-    </div>`;}).join('');
   const wk=allTasks().filter(o=>o.t.week&&!o.t.today&&!o.t.done);
-  const pick=wk.length? wk.map(o=>{const c=cat(o.tp);return `<button class="pick-item" data-act="addToday" data-tid="${o.tp.id}" data-i="${o.i}"><span class="cdot" style="background:${c.color}"></span>${esc(o.t.t)} <small>· ${esc(o.tp.title)}</small><span class="plus2">＋</span></button>`;}).join('') : `<div class="pick-empty">כל משימות השבוע כבר בהיום 👌</div>`;
-  return `${banner}<div class="today-wrap"><div class="focus-list">${rows}</div>
-    <div class="pickbar"><button class="pickbtn" data-act="pickToggle">＋ הוסף משימה מהשבוע</button><div class="picker">${pick}</div></div></div>`;
+  const pool=wk.length? wk.map(o=>{const c=cat(o.tp);return `<button class="pick-item" data-act="addToday" data-tid="${o.tp.id}" data-i="${o.i}"><span class="cdot" style="background:${c.color}"></span>${esc(o.t.t)} <small>· ${esc(o.tp.title)}</small><span class="plus2">＋</span></button>`;}).join('') : `<div class="pick-empty">כל משימות השבוע כבר בהיום 👌</div>`;
+  return `<div class="today-grid"><div class="today-main">${main}</div><aside class="week-pool"><div class="pool-head">מהשבוע — משוך ליום</div><div class="pool-list">${pool}</div></aside></div>`;
 }
 
 function htmlWeek(){
@@ -386,7 +405,7 @@ function htmlWeek(){
       </div>`).join('') || `<div class="pick-empty">כל המשימות הושלמו 🎉</div>`;
     return `<div class="group" style="--accent:${c.color}"><div class="group-head"><span class="cdot" style="background:${c.color}"></span><span class="group-title">${esc(tp.title)}</span><span class="group-sel">${sel} לשבוע</span></div><div class="wtasks">${rows}</div></div>`;
   }).join('');
-  return hint+banner+groups;
+  return hint+banner+`<div class="groups-grid">${groups}</div>`;
 }
 
 function htmlMonth(){
@@ -401,7 +420,7 @@ function htmlMonth(){
       <div class="fsub" style="margin-top:7px">${done}/${tot} משימות · ${pct}% הושלם</div>
     </div>`;}).join('') || `<div class="pick-empty">עדיין לא בחרת נושאי פוקוס — בחר מהחניון למטה 👇</div>`;
   const restHtml=rest.map(tp=>{const c=cat(tp);return `<div class="mrow dim"><span class="mdot" style="background:${c.color}"></span><span class="mname">${esc(tp.title)}</span><button class="mbtn" data-act="focus" data-tid="${tp.id}">→ הפוך לפוקוס</button></div>`;}).join('');
-  return hint+banner+`<div class="sec-lab">נושאי הפוקוס</div>${focusHtml}`+(rest.length?`<div class="sec-lab">חניון — לא בפוקוס החודש</div>${restHtml}`:'');
+  return hint+banner+`<div class="sec-lab">נושאי הפוקוס</div><div class="month-grid">${focusHtml}</div>`+(rest.length?`<div class="sec-lab">חניון — לא בפוקוס החודש</div><div class="month-grid">${restHtml}</div>`:'');
 }
 
 function touchedLabel(d){if(d===0)return{txt:'נגעת: היום',stale:false};if(d===1)return{txt:'נגעת: אתמול',stale:false};if(d<=7)return{txt:`נגעת: לפני ${d} ימים`,stale:false};return{txt:`מזמן לא נגעת · ${d} ימים`,stale:true};}
@@ -502,6 +521,16 @@ document.getElementById('impFile').onchange=e=>{
   r.onload=()=>{ try{ const d=JSON.parse(r.result); if(Array.isArray(d)&&d.every(x=>x&&typeof x.title==='string'&&Array.isArray(x.tasks))){ if(confirm('לשחזר מהקובץ? הנתונים הנוכחיים יוחלפו.')){ TOPICS=d; save(); renderView(); alert('שוחזר בהצלחה ✓'); } } else alert('קובץ גיבוי לא תקין'); }catch(err){ alert('קובץ גיבוי לא תקין'); } e.target.value=''; };
   r.readAsText(f);
 };
+
+/* keyboard shortcuts (desktop) */
+document.addEventListener('keydown',e=>{
+  if(!overlay.hidden){ if(e.key==='Escape')closeModal(); return; }
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||e.metaKey||e.ctrlKey||e.altKey)return;
+  const tabs={Digit1:'today',Numpad1:'today',Digit2:'week',Numpad2:'week',Digit3:'month',Numpad3:'month',Digit4:'all',Numpad4:'all'};
+  if(e.code==='KeyN'){e.preventDefault();openModal();}
+  else if(tabs[e.code]){e.preventDefault();view=tabs[e.code];renderView();}
+});
 
 document.documentElement.lang='he'; document.documentElement.dir='rtl';
 renderView();
