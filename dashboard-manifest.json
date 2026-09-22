@@ -1,0 +1,13 @@
+{
+  "name": "מוקד היום — יהודה",
+  "short_name": "מוקד היום",
+  "start_url": "./dashboard.html",
+  "display": "standalone",
+  "background_color": "#0d1f3c",
+  "theme_color": "#0d1f3c",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "dashboard-icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
